@@ -1335,10 +1335,12 @@ writeShellApplication {
           default = {
             type = "app";
             program = "${pkgs.pi-power-dev}/bin/pi-power-dev";
+            meta.description = "pi coding agent running the pi-power-dev profile";
           };
           pi-power-dev = {
             type = "app";
             program = "${pkgs.pi-power-dev}/bin/pi-power-dev";
+            meta.description = "pi coding agent running the pi-power-dev profile";
           };
         };
 
@@ -1795,10 +1797,12 @@ passes different values.
           default = {
             type = "app";
             program = "${pkgs.pi-game-dev}/bin/pi-game-dev";
+            meta.description = "pi coding agent running the pi-game-dev profile";
           };
           pi-game-dev = {
             type = "app";
             program = "${pkgs.pi-game-dev}/bin/pi-game-dev";
+            meta.description = "pi coding agent running the pi-game-dev profile";
           };
         };
 
