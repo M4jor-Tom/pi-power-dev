@@ -633,7 +633,7 @@ for p in prompts/*.md; do
   if [ ! -s "$p" ]; then err "empty prompt template: $p"; fi
   prompts=$((prompts + 1))
 done
-if [ -d prompts ] && [ "$prompts" -lt 3 ]; then
+if [ "$prompts" -lt 3 ]; then
   err "expected >= 3 prompt templates, found $prompts"
 fi
 if find prompts -mindepth 2 -name '*.md' 2>/dev/null | grep -q .; then
@@ -653,13 +653,12 @@ fi
 
 Run: `cd ~/repos/pi-power-dev && sh scripts/check.sh; echo "exit=$?"`
 
-Expected: no prompts counted; the success line reports `0 prompts` and exit is 0 because `prompts/` does not exist yet. Create the directory first so the assertion arms:
-
-```bash
-mkdir -p ~/repos/pi-power-dev/prompts && sh ~/repos/pi-power-dev/scripts/check.sh; echo "exit=$?"
-```
-
 Expected: `FAIL: expected >= 3 prompt templates, found 0`, `exit=1`.
+
+The floor is deliberately unconditional — no `[ -d prompts ]` guard. Guarding it
+on the directory's existence would make a wholesale deletion of `prompts/` pass
+silently, and would be asymmetric with the skills floor above, which has no such
+guard.
 
 - [ ] **Step 3: Write the prompt templates**
 
