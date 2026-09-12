@@ -834,7 +834,38 @@ test("does not match a destroy that is not terraform's", () => {
 	assert.equal(denyReason("./destroy.sh"), undefined);
 	assert.equal(denyReason("echo terraform destroys nothing"), undefined);
 });
+
+test("blocks a newline-separated destroy", () => {
+	assert.ok(denyReason("echo hi\nterraform destroy"));
+});
+
+test("blocks despite quoting the subcommand", () => {
+	assert.ok(denyReason('terraform "destroy"'));
+	assert.ok(denyReason("terraform 'destroy'"));
+});
+
+test("blocks inside command substitution", () => {
+	assert.ok(denyReason("$(terraform destroy)"));
+});
+
+test("blocks with leading whitespace or doubled spacing", () => {
+	assert.ok(denyReason("  terraform destroy"));
+	assert.ok(denyReason("terraform  destroy"));
+});
+
+test("blocks when reached through xargs", () => {
+	assert.ok(denyReason("xargs terraform destroy"));
+});
+
+test("does not block terraform destroy-plan", () => {
+	assert.equal(denyReason("terraform destroy-plan"), undefined);
+});
 ```
+
+The six cases after the original five are regression tests: each is a command
+shape the first version of these regexes silently let through. A guard against
+an irreversible action has to be tested against the shapes that defeat it, not
+only the shape that motivated it.
 
 - [ ] **Step 2: Run them to make sure they fail**
 
@@ -898,15 +929,30 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
  * pi has no permission system, so the two `permissions.deny` entries the
  * Claude profile carried are reimplemented here. Keep this list short: it is
  * a guard against an irreversible mistake, not an allowlist.
+ *
+ * ponytail: string matching, not shell parsing. Indirection still defeats it
+ * (`TF=terraform; $TF destroy`, aliases, `bash -c "$(printf ...)"`). This
+ * stops a fat-finger and a confidently-wrong agent, not a determined bypass —
+ * for that, use credentials that cannot destroy.
  */
 const DENIED: Array<{ pattern: RegExp; what: string }> = [
-	{ pattern: /(^|[;&|]\s*)terraform\s+destroy\b/, what: "terraform destroy" },
-	{ pattern: /(^|[;&|]\s*)tofu\s+destroy\b/, what: "tofu destroy" },
+	{ pattern: /(^|[\s;&|(])terraform destroy(?=[\s;&|)]|$)/, what: "terraform destroy" },
+	{ pattern: /(^|[\s;&|(])tofu destroy(?=[\s;&|)]|$)/, what: "tofu destroy" },
 ];
+
+/**
+ * Flatten the shapes a shell treats as identical but a naive regex does not:
+ * quotes around a word, and any run of whitespace — newlines included, which
+ * is how multi-line tool calls arrive.
+ */
+function normalize(command: string): string {
+	return command.replace(/["']/g, "").replace(/\s+/g, " ");
+}
 
 /** Returns a human-readable reason when `command` must not run. */
 export function denyReason(command: string): string | undefined {
-	const hit = DENIED.find(({ pattern }) => pattern.test(command));
+	const normalized = normalize(command);
+	const hit = DENIED.find(({ pattern }) => pattern.test(normalized));
 	return hit ? `${hit.what} is denied by this pi profile. Run it yourself if you mean it.` : undefined;
 }
 
@@ -923,7 +969,7 @@ export default function guard(pi: ExtensionAPI): void {
 
 Run: `cd ~/repos/pi-power-dev && node --test 'tests/*.test.ts'`
 
-Expected: 9 tests pass, 0 fail. The `cd infra && terraform destroy` case is what the `(^|[;&|]\s*)` anchor exists for; if it fails, the anchor is wrong, not the test.
+Expected: 15 tests pass (4 rtk + 11 guard), 0 fail. If a guard case fails, the regex is wrong, not the test — every one of those cases is a shell shape that reaches the same execution.
 
 - [ ] **Step 6: Add the extension assertions to `check.sh`**
 
