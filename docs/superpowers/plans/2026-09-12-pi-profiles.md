@@ -1053,12 +1053,20 @@ git commit -m "feat(extensions): wire rtk command rewriting and the destroy guar
 Append to `scripts/check.sh`, before the final `if [ "$fail" -eq 0 ]` block:
 
 ```sh
-# Every package source must be pinned. An unpinned git ref silently drifts,
-# and packages[] is the only manifest pi has.
+# Every package source must be pinned to something immutable. packages[] is
+# the only manifest pi has, and a floating ref (@main, @latest) silently
+# changes what the profile loads between runs. Requiring the ref to LOOK
+# immutable — a 40-hex SHA or a version-shaped tag — is the only test
+# available here, since git cannot distinguish a tag from a branch by name.
+# A slash-containing tag like @release/2024.1 is rejected as a result; that
+# conservative false positive fails loudly and is the safe direction.
 unpinned=$(jq -r '
   .packages // []
   | map(if type == "string" then . else .source end)
-  | map(select(test("^(npm|git):") and (test("@[^/]+$") | not)))
+  | map(select(
+      (startswith("npm:") and (test("@[0-9]+(\\.[0-9]+)*$") | not))
+      or (startswith("git:") and (test("@([0-9a-f]{40}|v?[0-9]+(\\.[0-9]+)*)$") | not))
+    ))
   | .[]' settings.json 2>/dev/null || true)
 if [ -n "$unpinned" ]; then
   err "unpinned package source(s): $(echo "$unpinned" | tr '\n' ' ')"
@@ -1084,7 +1092,7 @@ if jq -e '.mcpServers | length > 0' mcp.json >/dev/null 2>&1; then
   if ! jq -e '
     (.packages // [])
     | map(if type == "string" then . else .source end)
-    | any(startswith("npm:pi-mcp-adapter"))' settings.json >/dev/null 2>&1; then
+    | any(test("^npm:pi-mcp-adapter@"))' settings.json >/dev/null 2>&1; then
     err "mcp.json declares servers but pi-mcp-adapter is not in packages[]"
   fi
 fi
