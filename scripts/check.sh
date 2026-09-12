@@ -49,7 +49,7 @@ for p in prompts/*.md; do
   if [ ! -s "$p" ]; then err "empty prompt template: $p"; fi
   prompts=$((prompts + 1))
 done
-if [ -d prompts ] && [ "$prompts" -lt 3 ]; then
+if [ "$prompts" -lt 3 ]; then
   err "expected >= 3 prompt templates, found $prompts"
 fi
 if find prompts -mindepth 2 -name '*.md' 2>/dev/null | grep -q .; then
