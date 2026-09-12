@@ -70,12 +70,16 @@ if [ -d tests ] && command -v node >/dev/null 2>&1; then
   if ! node --test 'tests/*.test.ts' >/dev/null 2>&1; then err "node --test 'tests/*.test.ts' failed"; fi
 fi
 
-# Every package source must be pinned. An unpinned git ref silently drifts,
-# and packages[] is the only manifest pi has.
+# Every package source must be pinned to something immutable. packages[] is
+# the only manifest pi has, and a floating ref (@main, @latest) silently
+# changes what the profile loads between runs.
 unpinned=$(jq -r '
   .packages // []
   | map(if type == "string" then . else .source end)
-  | map(select(test("^(npm|git):") and (test("@[^/]+$") | not)))
+  | map(select(
+      (startswith("npm:") and (test("@[0-9]+(\\.[0-9]+)*$") | not))
+      or (startswith("git:") and (test("@([0-9a-f]{40}|v?[0-9]+(\\.[0-9]+)*)$") | not))
+    ))
   | .[]' settings.json 2>/dev/null || true)
 if [ -n "$unpinned" ]; then
   err "unpinned package source(s): $(echo "$unpinned" | tr '\n' ' ')"
@@ -101,7 +105,7 @@ if jq -e '.mcpServers | length > 0' mcp.json >/dev/null 2>&1; then
   if ! jq -e '
     (.packages // [])
     | map(if type == "string" then . else .source end)
-    | any(startswith("npm:pi-mcp-adapter"))' settings.json >/dev/null 2>&1; then
+    | any(test("^npm:pi-mcp-adapter@"))' settings.json >/dev/null 2>&1; then
     err "mcp.json declares servers but pi-mcp-adapter is not in packages[]"
   fi
 fi
