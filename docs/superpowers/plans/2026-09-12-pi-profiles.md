@@ -1509,12 +1509,17 @@ The frontmatter says `onthology-resume-router-slice` while the directory says `o
 
 ```bash
 cd ~/repos/pi-game-dev
-sed -i 's/^name: onthology-resume-router-slice$/name: ontology-resume-router-slice/' \
+sed -i 's/onthology-resume-router-slice/ontology-resume-router-slice/g' \
   skills/ontology-resume-router-slice/SKILL.md
 grep '^name:' skills/ontology-resume-router-slice/SKILL.md
+grep -rn 'onthology' . --exclude-dir=.git || echo "no remnants"
 ```
 
-Expected: `name: ontology-resume-router-slice`.
+Expected: `name: ontology-resume-router-slice`, then `no remnants`.
+
+The rename is global, not anchored to the frontmatter line: the misspelling
+also labels two nodes in the skill's own dot diagram, and fixing only the
+frontmatter leaves the skill inconsistent about its own name.
 
 - [ ] **Step 6: Repoint the skill's internal path references**
 
@@ -1639,6 +1644,12 @@ never handled cleanly.
 - `check.sh` can no longer count vendored skills: after pi installs them they
   live under the gitignored `git/` tree. It now checks the authored skills
   and asserts every package source is pinned.
+- Recursion is not sufficient on its own. `awesome-gamedev-agent-skills` keeps
+  its `router` at the repository root, outside the `skills/` directory that
+  convention discovery scans, so `settings.json` names both paths explicitly:
+  `"skills": ["skills", "router"]`. Dropping that filter when bumping the pin
+  would silently load the 67 engine skills without the dispatcher they are
+  routed through.
 - Dependabot's `gitsubmodule` ecosystem no longer applies. Bumping an upstream
   means editing a ref in `settings.json`, which is a reviewable one-line diff
   rather than an opaque gitlink change.
@@ -1675,6 +1686,19 @@ grep -n 'PI_POWER_DEV_DIR' README.md || echo "no stale env var"
 ```
 
 Expected: `no stale env var`.
+
+Then fix the one line a blanket rename cannot reach. The isolation paragraph
+ends "Nothing is shared with `~/.pi` or with `pi-power-dev`" — correct in the
+power-dev README, where it names the sibling, and still correct-looking after
+the rename because the string being renamed is the sibling's name. In this
+repo it must name the other profile:
+
+```bash
+sed -i 's|or with$|or with|; s|^`pi-game-dev`\.$|`pi-power-dev`.|' README.md
+grep -n -A1 'Nothing is shared' README.md
+```
+
+Expected: the sentence now ends `` `pi-power-dev`. ``
 
 - [ ] **Step 11: Run the test to verify it passes**
 
