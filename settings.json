@@ -4,7 +4,7 @@
   "enableSkillCommands": true,
   "packages": [
     "git:github.com/obra/superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797",
-    "git:github.com/DietrichGebert/ponytail@v4.9.0",
+    "git:github.com/DietrichGebert/ponytail@0a4dd63ad4541f4f655c4108a295916f3c1d8fda",
     "npm:pi-hermes-memory@0.9.8",
     "npm:pi-mcp-adapter@2.33.0",
     "npm:pi-subagents@0.67.0",

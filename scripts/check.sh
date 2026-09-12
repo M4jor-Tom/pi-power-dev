@@ -67,7 +67,10 @@ done
 
 # Extension unit tests.
 if [ -d tests ] && command -v node >/dev/null 2>&1; then
-  if ! node --test 'tests/*.test.ts' >/dev/null 2>&1; then err "node --test 'tests/*.test.ts' failed"; fi
+  if ! test_output=$(node --test 'tests/*.test.ts' 2>&1); then
+    err "node --test 'tests/*.test.ts' failed"
+    echo "$test_output"
+  fi
 fi
 
 # Every package source must be pinned to something immutable. packages[] is

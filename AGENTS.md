@@ -67,7 +67,7 @@ Préférer ces outils aux équivalents par défaut. Fallback silencieux si absen
 - Écrire des specs détaillées en amont pour réduire l'ambiguïté.
 - Utiliser l'outil `subagent` librement pour garder le contexte principal
   propre : déléguer recherche, exploration et analyse parallèle. Les agents
-  disponibles sont définis dans `agents/`.
+  disponibles sont ceux fournis par `pi-subagents`.
 - Après TOUTE correction de l'utilisateur : noter le pattern dans
   `tasks/lessons.md` et écrire une règle pour soi-même.
 - Ne jamais marquer une tâche comme terminée sans prouver qu'elle fonctionne :

@@ -31,7 +31,6 @@ nix run github:M4jor-Tom/pi-power-dev.app
 | `skills/` | Locally authored skills |
 | `prompts/` | Slash commands |
 | `extensions/` | TypeScript extensions (pi's replacement for hooks) |
-| `agents/` | Subagent definitions, read by `pi-subagents` |
 | `tests/` | `node --test` unit tests for the extensions |
 | `scripts/check.sh` | Integrity check, also run in CI |
 

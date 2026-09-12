@@ -1,5 +1,12 @@
 # pi.dev Profiles Implementation Plan
 
+> **Superseded in part.** Live acceptance testing found that
+> `understand-anything` cannot be installed by pi — its `prepare` script needs
+> a pnpm + TypeScript build that `npm install --omit=dev` cannot run, and the
+> failure crashes pi at startup. It and the ten `agents/` definitions it
+> supplied were removed in commit `64d616d`. Subagent support remains via
+> `pi-subagents`' built-in agents. Every other statement below stands.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build four repositories — two pi.dev agent-directory profiles (`pi-power-dev`, `pi-game-dev`) and two Nix apps that clone them, supply their dependencies, and run pi against them.

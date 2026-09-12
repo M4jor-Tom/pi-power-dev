@@ -1,5 +1,12 @@
 # pi.dev profiles: `pi-power-dev` and `pi-game-dev`
 
+> **Superseded in part.** Live acceptance testing found that
+> `understand-anything` cannot be installed by pi — its `prepare` script needs
+> a pnpm + TypeScript build that `npm install --omit=dev` cannot run, and the
+> failure crashes pi at startup. It and the ten `agents/` definitions it
+> supplied were removed in commit `64d616d`. Subagent support remains via
+> `pi-subagents`' built-in agents. Every other statement below stands.
+
 Date: 2026-09-12
 Status: Approved
 

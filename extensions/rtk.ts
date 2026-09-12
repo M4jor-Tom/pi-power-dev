@@ -15,10 +15,13 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 export function rtkRewrite(command: string): string | undefined {
 	let stdout: string;
 	try {
+		// The 5s timeout blocks the event loop for its duration; ExtensionHandler
+		// permits a Promise return if that synchronous wait ever becomes a problem.
 		stdout = execFileSync("rtk", ["hook", "claude"], {
 			input: JSON.stringify({ tool_name: "Bash", tool_input: { command } }),
 			encoding: "utf-8",
 			timeout: 5000,
+			stdio: ["pipe", "pipe", "ignore"],
 		});
 	} catch {
 		return undefined;

@@ -29,3 +29,20 @@ projects-memory/
 hermes-memory-config.json
 .pi-hermes-locks.sqlite
 mcp-cache.json
+
+# Runtime state written by pi and its packages. The agent dir is also the
+# repo, so anything uncovered here sits untracked forever — and one untracked
+# file disables the app wrapper's auto-pull, silently.
+.pi-hermes-locks.sqlite*
+mcp-*.json
+mcp-oauth/
+oauth.json*
+tmp/
+missions/
+chains/
+profiles/
+agent-memory/
+agent-plugin-data/
+extensions/subagent/
+.superpowers/
+tasks/
