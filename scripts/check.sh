@@ -23,5 +23,22 @@ for leak in auth.json trust.json models-store.json hermes-memory-config.json; do
   fi
 done
 
-if [ "$fail" -eq 0 ]; then echo "OK: agent dir is well-formed"; fi
+# Every skill needs name and description. pi refuses to load a skill with no
+# description and warns on a malformed name.
+skills=0
+for s in skills/*/; do
+  [ -d "$s" ] || continue
+  f="${s}SKILL.md"
+  if [ ! -f "$f" ]; then err "no SKILL.md in $s"; continue; fi
+  if ! awk 'NR<=20 && /^name:/{found=1} END{exit !found}' "$f"; then
+    err "$f has no name in frontmatter"
+  fi
+  if ! awk 'NR<=20 && /^description:/{found=1} END{exit !found}' "$f"; then
+    err "$f has no description in frontmatter"
+  fi
+  skills=$((skills + 1))
+done
+if [ "$skills" -lt 6 ]; then err "expected >= 6 skills, found $skills"; fi
+
+if [ "$fail" -eq 0 ]; then echo "OK: agent dir is well-formed, $skills skills"; fi
 exit "$fail"
