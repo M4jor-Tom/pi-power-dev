@@ -848,6 +848,11 @@ test("blocks inside command substitution", () => {
 	assert.ok(denyReason("$(terraform destroy)"));
 });
 
+test("blocks inside backtick substitution", () => {
+	assert.ok(denyReason("`terraform destroy`"));
+	assert.ok(denyReason("echo `terraform destroy`"));
+});
+
 test("blocks with leading whitespace or doubled spacing", () => {
 	assert.ok(denyReason("  terraform destroy"));
 	assert.ok(denyReason("terraform  destroy"));
@@ -934,10 +939,15 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
  * (`TF=terraform; $TF destroy`, aliases, `bash -c "$(printf ...)"`). This
  * stops a fat-finger and a confidently-wrong agent, not a determined bypass —
  * for that, use credentials that cannot destroy.
+ *
+ * The quote-stripping in normalize() means a command that merely mentions the
+ * phrase is blocked too — `git commit -m "revert the terraform destroy
+ * incident"` does not run. That is deliberate: a false block costs one
+ * rephrase, a false pass costs infrastructure.
  */
 const DENIED: Array<{ pattern: RegExp; what: string }> = [
-	{ pattern: /(^|[\s;&|(])terraform destroy(?=[\s;&|)]|$)/, what: "terraform destroy" },
-	{ pattern: /(^|[\s;&|(])tofu destroy(?=[\s;&|)]|$)/, what: "tofu destroy" },
+	{ pattern: /(^|[\s;&|(`])terraform destroy(?=[\s;&|)`]|$)/, what: "terraform destroy" },
+	{ pattern: /(^|[\s;&|(`])tofu destroy(?=[\s;&|)`]|$)/, what: "tofu destroy" },
 ];
 
 /**
@@ -969,7 +979,7 @@ export default function guard(pi: ExtensionAPI): void {
 
 Run: `cd ~/repos/pi-power-dev && node --test 'tests/*.test.ts'`
 
-Expected: 15 tests pass (4 rtk + 11 guard), 0 fail. If a guard case fails, the regex is wrong, not the test — every one of those cases is a shell shape that reaches the same execution.
+Expected: 16 tests pass (4 rtk + 12 guard), 0 fail. If a guard case fails, the regex is wrong, not the test — every one of those cases is a shell shape that reaches the same execution.
 
 - [ ] **Step 6: Add the extension assertions to `check.sh`**
 
