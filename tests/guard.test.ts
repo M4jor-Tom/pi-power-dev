@@ -54,3 +54,25 @@ test("blocks when reached through xargs", () => {
 test("does not block terraform destroy-plan", () => {
 	assert.equal(denyReason("terraform destroy-plan"), undefined);
 });
+
+test("blocks destroy behind terraform's own global flags", () => {
+	assert.ok(denyReason("terraform -chdir=infra destroy"));
+	assert.ok(denyReason("terraform -no-color destroy"));
+	assert.ok(denyReason("tofu -chdir=x destroy"));
+});
+
+test("blocks apply -destroy, terraform's documented equivalent", () => {
+	assert.ok(denyReason("terraform apply -destroy"));
+	assert.ok(denyReason("terraform apply -destroy -auto-approve"));
+	assert.ok(denyReason("tofu apply -destroy"));
+	assert.ok(denyReason("terraform -chdir=. apply -destroy"));
+});
+
+test("blocks across a backslash line continuation", () => {
+	assert.ok(denyReason("terraform \\\n  destroy"));
+});
+
+test("still allows plan -destroy and a bare -destroy word", () => {
+	assert.equal(denyReason("terraform plan -destroy"), undefined);
+	assert.equal(denyReason("terraform apply && echo -destroy"), undefined);
+});
