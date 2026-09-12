@@ -130,12 +130,13 @@ pull is non-fatal — offline use still starts. `PI_POWER_DEV_DIR` /
 as-is; its wrapper already sets `PI_SKIP_VERSION_CHECK=1`, `PI_TELEMETRY=0`
 and supplies `rg`/`fd`.
 
-Runtime dependencies, all from nixpkgs:
+Runtime dependencies, all from nixpkgs, identical for both apps because both
+profiles carry the same skills and extensions:
 
-| App | `runtimeInputs` |
-|---|---|
-| both | `pi-coding-agent git gh glab nodejs bun ripgrep fd jq yq-go` |
-| `pi-power-dev.app` also | `uv python3 rtk graphify markitdown pandoc poppler-utils yt-dlp playwright-driver` |
+```
+pi-coding-agent git gh glab nodejs bun ripgrep fd jq yq-go
+uv python3 rtk graphify markitdown pandoc poppler-utils yt-dlp playwright-driver
+```
 
 Engine toolchains for gamedev stay in each game repo's own devShell; the
 router skill selects an engine per project, so shipping all of them in the
@@ -176,16 +177,16 @@ repositories anywhere in these repos.
 | `theme: "auto"` | `theme` — pi detects terminal background on first run. |
 | `language: "English"` | A line in `AGENTS.md`. |
 | `worktree`, `enableWorkflows`, `sandbox`, `cleanupPeriodDays`, `spinnerTipsEnabled`, `skipDangerousModePermissionPrompt`, `skipWorkflowUsageWarning` | No pi analogue. Dropped; each listed in the repo README with the reason. |
-
-### `pi-power-dev` only
-
-| Claude artifact | pi approach |
-|---|---|
-| `rules/context7.md` | `skills/context7/SKILL.md`. In Claude this loads by directory convention on every session; as a pi skill it is progressive-disclosure, which suits a conditional rule better. |
-| **`rtk`** | `extensions/rtk.ts`. `RTK.md` asserts commands are rewritten automatically, but **no such hook has ever been wired** — the NixOS `rtk.enable` flag only installs the binary. A `tool_call` handler mutating `event.input.command` for the bash tool makes the documented behaviour real for the first time. `rtk hook` has `claude`/`cursor`/`gemini`/`copilot`/`droid` modes but no `pi` mode; the extension feeds it the Claude-shaped payload (`{tool_name, tool_input:{command}}`) and applies the returned command. `rtk hook check` provides a dry run. |
-| 6 authored skills (`graphify`, `llm-council`, `markitdown`, `playwright-cli`, `prd`, `writing-adrs`) | Copied verbatim. Same Agent Skills format; unknown frontmatter (`trigger:`, `user-invocable:`) is ignored by pi. `graphify` additionally gets `prompts/graphify.md` so `/graphify` works as a real slash command rather than only `/skill:graphify`. |
-| `/simplify` + `/ponytail:ponytail-review` end-of-task ritual | `prompts/simplify.md`; ponytail's own skills provide the review. The ritual stays stated in `AGENTS.md`. |
+| `rules/context7.md` (power-dev today) | `skills/context7/SKILL.md`. In Claude this loads by directory convention on every session; as a pi skill it is progressive-disclosure, which suits a conditional rule better. |
+| **`rtk`** (power-dev today) | `extensions/rtk.ts`. `RTK.md` asserts commands are rewritten automatically, but **no such hook has ever been wired** — the NixOS `rtk.enable` flag only installs the binary. A `tool_call` handler mutating `event.input.command` for the bash tool makes the documented behaviour real for the first time. `rtk hook` has `claude`/`cursor`/`gemini`/`copilot`/`droid` modes but no `pi` mode; the extension feeds it the Claude-shaped payload (`{tool_name, tool_input:{command}}`) and applies the returned command. `rtk hook check` provides a dry run. |
+| 6 authored skills (power-dev today): `graphify`, `llm-council`, `markitdown`, `playwright-cli`, `prd`, `writing-adrs` | Copied verbatim into both repos. Same Agent Skills format; unknown frontmatter (`trigger:`, `user-invocable:`) is ignored by pi. `graphify` additionally gets `prompts/graphify.md` so `/graphify` works as a real slash command rather than only `/skill:graphify`. |
+| `/simplify` + `/ponytail:ponytail-review` end-of-task ritual (power-dev today) | `prompts/simplify.md`; ponytail's own skills provide the review. The ritual stays stated in `AGENTS.md`. |
 | `settings.local.json` (`WebFetch(domain:github.com)`) | Dropped with the rest of the permission system. |
+
+Everything above lands in **both** repos. The two profiles differ only by
+what `pi-game-dev` adds on top, and by `AGENTS.md`, which keeps each
+profile's own policy: `pi-power-dev` carries the general git/CLI/workflow
+rules, `pi-game-dev` carries those plus the ontology-first rules.
 
 ### `pi-game-dev` only
 
@@ -205,7 +206,8 @@ repositories anywhere in these repos.
 
 ## Settings sketch
 
-`pi-power-dev/settings.json`:
+Shared by both repos — `pi-game-dev/settings.json` is this plus
+`defaultProvider`/`defaultModel` and the three gamedev packages:
 
 ```json
 {
