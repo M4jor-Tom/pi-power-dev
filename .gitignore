@@ -1,0 +1,29 @@
+# This repo IS a pi agent dir (PI_CODING_AGENT_DIR points here), so pi writes
+# its runtime state next to the tracked config. Everything below is either a
+# secret, a cache, or derived from settings.json.
+
+# Credentials and per-machine decisions.
+auth.json
+trust.json
+
+# Provider catalog cache; refresh with `pi update --models`.
+models-store.json
+
+# Session history, and the fd/rg binaries pi downloads when they are not on PATH.
+sessions/
+bin/
+
+# Package installs, driven by the pinned packages[] array in settings.json.
+npm/
+git/
+node_modules/
+
+experimental/
+pi-debug.log
+*.bak
+
+# pi-hermes-memory state. Per-profile by construction, because it resolves
+# its paths from the agent dir.
+pi-hermes-memory/
+projects-memory/
+hermes-memory-config.json

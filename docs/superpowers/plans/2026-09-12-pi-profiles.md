@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- GitHub owner is `M4jor-Tom`. All four repos are **private**.
+- GitHub owner is `M4jor-Tom`. All four repos are **public**, matching the predecessor profiles `claude-power-dev` and `claude-game-dev`. No secrets are involved: `auth.json`, `trust.json` and every runtime path are gitignored.
 - Flake and clone URLs use `git+https://` / `https://`, **never** `git+ssh://`.
 - `PI_CODING_AGENT_DIR` points at the agent dir itself. `~/.pi-power-dev/settings.json`, **not** `~/.pi-power-dev/agent/settings.json`.
 - `settings.json` must remain a writable regular file — pi merges its own fields into it under a lock. Never symlink it out of the Nix store.
@@ -612,11 +612,13 @@ pi's slash commands. Filename minus `.md` is the command name; discovery is non-
 - Create: `~/repos/pi-power-dev/prompts/graphify.md`
 - Create: `~/repos/pi-power-dev/prompts/revise-agents-md.md`
 - Modify: `~/repos/pi-power-dev/scripts/check.sh`
-- Modify: `~/repos/pi-power-dev/settings.json`
 
 **Interfaces:**
 - Consumes: `skills/graphify` from Task 3
 - Produces: `/simplify`, `/graphify`, `/revise-agents-md`
+
+`settings.json` is deliberately untouched: pi auto-discovers `prompts/` in the
+agent dir, so prompt templates need no settings entry.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -631,7 +633,7 @@ for p in prompts/*.md; do
   if [ ! -s "$p" ]; then err "empty prompt template: $p"; fi
   prompts=$((prompts + 1))
 done
-if [ -d prompts ] && [ "$prompts" -lt 3 ]; then
+if [ "$prompts" -lt 3 ]; then
   err "expected >= 3 prompt templates, found $prompts"
 fi
 if find prompts -mindepth 2 -name '*.md' 2>/dev/null | grep -q .; then
@@ -651,13 +653,12 @@ fi
 
 Run: `cd ~/repos/pi-power-dev && sh scripts/check.sh; echo "exit=$?"`
 
-Expected: no prompts counted; the success line reports `0 prompts` and exit is 0 because `prompts/` does not exist yet. Create the directory first so the assertion arms:
-
-```bash
-mkdir -p ~/repos/pi-power-dev/prompts && sh ~/repos/pi-power-dev/scripts/check.sh; echo "exit=$?"
-```
-
 Expected: `FAIL: expected >= 3 prompt templates, found 0`, `exit=1`.
+
+The floor is deliberately unconditional — no `[ -d prompts ]` guard. Guarding it
+on the directory's existence would make a wholesale deletion of `prompts/` pass
+silently, and would be asymmetric with the skills floor above, which has no such
+guard.
 
 - [ ] **Step 3: Write the prompt templates**
 
@@ -833,11 +834,47 @@ test("does not match a destroy that is not terraform's", () => {
 	assert.equal(denyReason("./destroy.sh"), undefined);
 	assert.equal(denyReason("echo terraform destroys nothing"), undefined);
 });
+
+test("blocks a newline-separated destroy", () => {
+	assert.ok(denyReason("echo hi\nterraform destroy"));
+});
+
+test("blocks despite quoting the subcommand", () => {
+	assert.ok(denyReason('terraform "destroy"'));
+	assert.ok(denyReason("terraform 'destroy'"));
+});
+
+test("blocks inside command substitution", () => {
+	assert.ok(denyReason("$(terraform destroy)"));
+});
+
+test("blocks inside backtick substitution", () => {
+	assert.ok(denyReason("`terraform destroy`"));
+	assert.ok(denyReason("echo `terraform destroy`"));
+});
+
+test("blocks with leading whitespace or doubled spacing", () => {
+	assert.ok(denyReason("  terraform destroy"));
+	assert.ok(denyReason("terraform  destroy"));
+});
+
+test("blocks when reached through xargs", () => {
+	assert.ok(denyReason("xargs terraform destroy"));
+});
+
+test("does not block terraform destroy-plan", () => {
+	assert.equal(denyReason("terraform destroy-plan"), undefined);
+});
 ```
+
+The six cases after the original five are regression tests: each is a command
+shape the first version of these regexes silently let through. A guard against
+an irreversible action has to be tested against the shapes that defeat it, not
+only the shape that motivated it.
 
 - [ ] **Step 2: Run them to make sure they fail**
 
-Run: `cd ~/repos/pi-power-dev && node --test tests/`
+Run: `cd ~/repos/pi-power-dev && node --test 'tests/*.test.ts'`
 
 Expected: FAIL — `Cannot find module '../extensions/rtk.ts'`.
 
@@ -897,15 +934,35 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
  * pi has no permission system, so the two `permissions.deny` entries the
  * Claude profile carried are reimplemented here. Keep this list short: it is
  * a guard against an irreversible mistake, not an allowlist.
+ *
+ * ponytail: string matching, not shell parsing. Indirection still defeats it
+ * (`TF=terraform; $TF destroy`, aliases, `bash -c "$(printf ...)"`). This
+ * stops a fat-finger and a confidently-wrong agent, not a determined bypass —
+ * for that, use credentials that cannot destroy.
+ *
+ * The quote-stripping in normalize() means a command that merely mentions the
+ * phrase is blocked too — `git commit -m "revert the terraform destroy
+ * incident"` does not run. That is deliberate: a false block costs one
+ * rephrase, a false pass costs infrastructure.
  */
 const DENIED: Array<{ pattern: RegExp; what: string }> = [
-	{ pattern: /(^|[;&|]\s*)terraform\s+destroy\b/, what: "terraform destroy" },
-	{ pattern: /(^|[;&|]\s*)tofu\s+destroy\b/, what: "tofu destroy" },
+	{ pattern: /(^|[\s;&|(`])terraform destroy(?=[\s;&|)`]|$)/, what: "terraform destroy" },
+	{ pattern: /(^|[\s;&|(`])tofu destroy(?=[\s;&|)`]|$)/, what: "tofu destroy" },
 ];
+
+/**
+ * Flatten the shapes a shell treats as identical but a naive regex does not:
+ * quotes around a word, and any run of whitespace — newlines included, which
+ * is how multi-line tool calls arrive.
+ */
+function normalize(command: string): string {
+	return command.replace(/["']/g, "").replace(/\s+/g, " ");
+}
 
 /** Returns a human-readable reason when `command` must not run. */
 export function denyReason(command: string): string | undefined {
-	const hit = DENIED.find(({ pattern }) => pattern.test(command));
+	const normalized = normalize(command);
+	const hit = DENIED.find(({ pattern }) => pattern.test(normalized));
 	return hit ? `${hit.what} is denied by this pi profile. Run it yourself if you mean it.` : undefined;
 }
 
@@ -920,9 +977,9 @@ export default function guard(pi: ExtensionAPI): void {
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `cd ~/repos/pi-power-dev && node --test tests/`
+Run: `cd ~/repos/pi-power-dev && node --test 'tests/*.test.ts'`
 
-Expected: 9 tests pass, 0 fail. The `cd infra && terraform destroy` case is what the `(^|[;&|]\s*)` anchor exists for; if it fails, the anchor is wrong, not the test.
+Expected: 16 tests pass (4 rtk + 12 guard), 0 fail. If a guard case fails, the regex is wrong, not the test — every one of those cases is a shell shape that reaches the same execution.
 
 - [ ] **Step 6: Add the extension assertions to `check.sh`**
 
@@ -940,7 +997,7 @@ done
 
 # Extension unit tests.
 if [ -d tests ] && command -v node >/dev/null 2>&1; then
-  if ! node --test tests/ >/dev/null 2>&1; then err "node --test tests/ failed"; fi
+  if ! node --test 'tests/*.test.ts' >/dev/null 2>&1; then err "node --test 'tests/*.test.ts' failed"; fi
 fi
 ```
 
@@ -996,12 +1053,20 @@ git commit -m "feat(extensions): wire rtk command rewriting and the destroy guar
 Append to `scripts/check.sh`, before the final `if [ "$fail" -eq 0 ]` block:
 
 ```sh
-# Every package source must be pinned. An unpinned git ref silently drifts,
-# and packages[] is the only manifest pi has.
+# Every package source must be pinned to something immutable. packages[] is
+# the only manifest pi has, and a floating ref (@main, @latest) silently
+# changes what the profile loads between runs. Requiring the ref to LOOK
+# immutable — a 40-hex SHA or a version-shaped tag — is the only test
+# available here, since git cannot distinguish a tag from a branch by name.
+# A slash-containing tag like @release/2024.1 is rejected as a result; that
+# conservative false positive fails loudly and is the safe direction.
 unpinned=$(jq -r '
   .packages // []
   | map(if type == "string" then . else .source end)
-  | map(select(test("^(npm|git):") and (test("@[^/]+$") | not)))
+  | map(select(
+      (startswith("npm:") and (test("@[0-9]+(\\.[0-9]+)*$") | not))
+      or (startswith("git:") and (test("@([0-9a-f]{40}|v?[0-9]+(\\.[0-9]+)*)$") | not))
+    ))
   | .[]' settings.json 2>/dev/null || true)
 if [ -n "$unpinned" ]; then
   err "unpinned package source(s): $(echo "$unpinned" | tr '\n' ' ')"
@@ -1027,7 +1092,7 @@ if jq -e '.mcpServers | length > 0' mcp.json >/dev/null 2>&1; then
   if ! jq -e '
     (.packages // [])
     | map(if type == "string" then . else .source end)
-    | any(startswith("npm:pi-mcp-adapter"))' settings.json >/dev/null 2>&1; then
+    | any(test("^npm:pi-mcp-adapter@"))' settings.json >/dev/null 2>&1; then
     err "mcp.json declares servers but pi-mcp-adapter is not in packages[]"
   fi
 fi
@@ -1203,8 +1268,14 @@ writeShellApplication {
     if [ ! -e "$DIR" ]; then
       echo "${profileName}: cloning ${configRepo} -> $DIR" >&2
       git clone "${configRepo}" "$DIR"
-    elif [ -d "$DIR/.git" ] && [ -z "$(git -C "$DIR" status --porcelain)" ]; then
-      # Clean tree only. A dirty tree keeps its local edits, always.
+    elif [ -d "$DIR/.git" ] \
+      && [ "$(git -C "$DIR" remote get-url origin 2>/dev/null)" = "${configRepo}" ] \
+      && [ -z "$(git -C "$DIR" status --porcelain)" ]; then
+      # Clean tree, and only a checkout of this profile's own repo. A dirty
+      # tree keeps its local edits, always; an unrelated checkout is never
+      # touched. Without the origin test, pointing the env var at any clean
+      # tracked directory would fast-forward it as a side effect of starting
+      # the agent.
       git -C "$DIR" pull --ff-only --quiet \
         || echo "${profileName}: pull failed, using the local checkout" >&2
     fi
@@ -1264,10 +1335,12 @@ writeShellApplication {
           default = {
             type = "app";
             program = "${pkgs.pi-power-dev}/bin/pi-power-dev";
+            meta.description = "pi coding agent running the pi-power-dev profile";
           };
           pi-power-dev = {
             type = "app";
             program = "${pkgs.pi-power-dev}/bin/pi-power-dev";
+            meta.description = "pi coding agent running the pi-power-dev profile";
           };
         };
 
@@ -1438,12 +1511,17 @@ The frontmatter says `onthology-resume-router-slice` while the directory says `o
 
 ```bash
 cd ~/repos/pi-game-dev
-sed -i 's/^name: onthology-resume-router-slice$/name: ontology-resume-router-slice/' \
+sed -i 's/onthology-resume-router-slice/ontology-resume-router-slice/g' \
   skills/ontology-resume-router-slice/SKILL.md
 grep '^name:' skills/ontology-resume-router-slice/SKILL.md
+grep -rn 'onthology' . --exclude-dir=.git || echo "no remnants"
 ```
 
-Expected: `name: ontology-resume-router-slice`.
+Expected: `name: ontology-resume-router-slice`, then `no remnants`.
+
+The rename is global, not anchored to the frontmatter line: the misspelling
+also labels two nodes in the skill's own dot diagram, and fixing only the
+frontmatter leaves the skill inconsistent about its own name.
 
 - [ ] **Step 6: Repoint the skill's internal path references**
 
@@ -1568,6 +1646,12 @@ never handled cleanly.
 - `check.sh` can no longer count vendored skills: after pi installs them they
   live under the gitignored `git/` tree. It now checks the authored skills
   and asserts every package source is pinned.
+- Recursion is not sufficient on its own. `awesome-gamedev-agent-skills` keeps
+  its `router` at the repository root, outside the `skills/` directory that
+  convention discovery scans, so `settings.json` names both paths explicitly:
+  `"skills": ["skills", "router"]`. Dropping that filter when bumping the pin
+  would silently load the 67 engine skills without the dispatcher they are
+  routed through.
 - Dependabot's `gitsubmodule` ecosystem no longer applies. Bumping an upstream
   means editing a ref in `settings.json`, which is a reviewable one-line diff
   rather than an opaque gitlink change.
@@ -1604,6 +1688,19 @@ grep -n 'PI_POWER_DEV_DIR' README.md || echo "no stale env var"
 ```
 
 Expected: `no stale env var`.
+
+Then fix the one line a blanket rename cannot reach. The isolation paragraph
+ends "Nothing is shared with `~/.pi` or with `pi-power-dev`" — correct in the
+power-dev README, where it names the sibling, and still correct-looking after
+the rename because the string being renamed is the sibling's name. In this
+repo it must name the other profile:
+
+```bash
+sed -i 's|or with$|or with|; s|^`pi-game-dev`\.$|`pi-power-dev`.|' README.md
+grep -n -A1 'Nothing is shared' README.md
+```
+
+Expected: the sentence now ends `` `pi-power-dev`. ``
 
 - [ ] **Step 11: Run the test to verify it passes**
 
@@ -1643,7 +1740,13 @@ Reuses Task 8's `package.nix` verbatim, with different arguments.
 mkdir -p ~/repos/pi-game-dev.app && cd ~/repos/pi-game-dev.app && git init -b main
 cp ~/repos/pi-power-dev.app/package.nix .
 cp ~/repos/pi-power-dev.app/.gitignore .
+cp ~/repos/pi-power-dev.app/flake.lock .
 ```
+
+Copy the lockfile too: two sibling apps shipping the same wrapper should pin
+the same nixpkgs. Letting `nix build` resolve a fresh one makes the two apps
+drift apart for no reason, and an unpinned `nixpkgs-unstable` is a live source
+of build variability.
 
 `package.nix` is parameterised, so it needs no edits — only the overlay
 passes different values.
@@ -1694,10 +1797,12 @@ passes different values.
           default = {
             type = "app";
             program = "${pkgs.pi-game-dev}/bin/pi-game-dev";
+            meta.description = "pi coding agent running the pi-game-dev profile";
           };
           pi-game-dev = {
             type = "app";
             program = "${pkgs.pi-game-dev}/bin/pi-game-dev";
+            meta.description = "pi coding agent running the pi-game-dev profile";
           };
         };
 

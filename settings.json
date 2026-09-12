@@ -1,0 +1,36 @@
+{
+  "defaultThinkingLevel": "xhigh",
+  "defaultProjectTrust": "ask",
+  "enableSkillCommands": true,
+  "packages": [
+    "git:github.com/obra/superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797",
+    "git:github.com/DietrichGebert/ponytail@v4.9.0",
+    "npm:pi-hermes-memory@0.9.8",
+    "npm:pi-mcp-adapter@2.33.0",
+    "npm:pi-subagents@0.67.0",
+    {
+      "source": "git:github.com/anthropics/claude-plugins-official@ed404106fcd80ba98ecb7c851e531dcb626d13b7",
+      "skills": [
+        "plugins/frontend-design/skills",
+        "plugins/claude-md-management/skills"
+      ],
+      "extensions": [],
+      "prompts": [],
+      "themes": []
+    },
+    {
+      "source": "git:github.com/nextlevelbuilder/ui-ux-pro-max-skill@1307d97a72e6c1cda572cb65471ae5ce82995218",
+      "skills": [".claude/skills"],
+      "extensions": [],
+      "prompts": [],
+      "themes": []
+    },
+    {
+      "source": "git:github.com/Egonex-AI/Understand-Anything@6ae71878beb50226a1e4b7e2f52ac6468c86f74b",
+      "skills": ["understand-anything-plugin/skills"],
+      "extensions": [],
+      "prompts": [],
+      "themes": []
+    }
+  ]
+}
