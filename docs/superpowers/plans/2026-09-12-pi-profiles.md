@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- GitHub owner is `M4jor-Tom`. All four repos are **private**.
+- GitHub owner is `M4jor-Tom`. All four repos are **public**, matching the predecessor profiles `claude-power-dev` and `claude-game-dev`. No secrets are involved: `auth.json`, `trust.json` and every runtime path are gitignored.
 - Flake and clone URLs use `git+https://` / `https://`, **never** `git+ssh://`.
 - `PI_CODING_AGENT_DIR` points at the agent dir itself. `~/.pi-power-dev/settings.json`, **not** `~/.pi-power-dev/agent/settings.json`.
 - `settings.json` must remain a writable regular file — pi merges its own fields into it under a lock. Never symlink it out of the Nix store.
@@ -612,11 +612,13 @@ pi's slash commands. Filename minus `.md` is the command name; discovery is non-
 - Create: `~/repos/pi-power-dev/prompts/graphify.md`
 - Create: `~/repos/pi-power-dev/prompts/revise-agents-md.md`
 - Modify: `~/repos/pi-power-dev/scripts/check.sh`
-- Modify: `~/repos/pi-power-dev/settings.json`
 
 **Interfaces:**
 - Consumes: `skills/graphify` from Task 3
 - Produces: `/simplify`, `/graphify`, `/revise-agents-md`
+
+`settings.json` is deliberately untouched: pi auto-discovers `prompts/` in the
+agent dir, so prompt templates need no settings entry.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -837,7 +839,7 @@ test("does not match a destroy that is not terraform's", () => {
 
 - [ ] **Step 2: Run them to make sure they fail**
 
-Run: `cd ~/repos/pi-power-dev && node --test tests/`
+Run: `cd ~/repos/pi-power-dev && node --test 'tests/*.test.ts'`
 
 Expected: FAIL — `Cannot find module '../extensions/rtk.ts'`.
 
@@ -920,7 +922,7 @@ export default function guard(pi: ExtensionAPI): void {
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `cd ~/repos/pi-power-dev && node --test tests/`
+Run: `cd ~/repos/pi-power-dev && node --test 'tests/*.test.ts'`
 
 Expected: 9 tests pass, 0 fail. The `cd infra && terraform destroy` case is what the `(^|[;&|]\s*)` anchor exists for; if it fails, the anchor is wrong, not the test.
 
@@ -940,7 +942,7 @@ done
 
 # Extension unit tests.
 if [ -d tests ] && command -v node >/dev/null 2>&1; then
-  if ! node --test tests/ >/dev/null 2>&1; then err "node --test tests/ failed"; fi
+  if ! node --test 'tests/*.test.ts' >/dev/null 2>&1; then err "node --test 'tests/*.test.ts' failed"; fi
 fi
 ```
 
