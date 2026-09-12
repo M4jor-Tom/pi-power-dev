@@ -70,7 +70,43 @@ if [ -d tests ] && command -v node >/dev/null 2>&1; then
   if ! node --test 'tests/*.test.ts' >/dev/null 2>&1; then err "node --test 'tests/*.test.ts' failed"; fi
 fi
 
+# Every package source must be pinned. An unpinned git ref silently drifts,
+# and packages[] is the only manifest pi has.
+unpinned=$(jq -r '
+  .packages // []
+  | map(if type == "string" then . else .source end)
+  | map(select(test("^(npm|git):") and (test("@[^/]+$") | not)))
+  | .[]' settings.json 2>/dev/null || true)
+if [ -n "$unpinned" ]; then
+  err "unpinned package source(s): $(echo "$unpinned" | tr '\n' ' ')"
+fi
+
+# Agent definitions feed pi-subagents. It reads <agent-dir>/agents/*.md
+# whenever PI_CODING_AGENT_DIR is set, which it always is for this profile.
+agents=0
+for a in agents/*.md; do
+  [ -f "$a" ] || continue
+  if ! awk 'NR<=20 && /^name:/{found=1} END{exit !found}' "$a"; then
+    err "$a has no name in frontmatter"
+  fi
+  if ! awk 'NR<=20 && /^description:/{found=1} END{exit !found}' "$a"; then
+    err "$a has no description in frontmatter"
+  fi
+  agents=$((agents + 1))
+done
+if [ "$agents" -lt 10 ]; then err "expected >= 10 agents, found $agents"; fi
+
+# The MCP servers mcp.json declares are only reachable if the adapter is pinned.
+if jq -e '.mcpServers | length > 0' mcp.json >/dev/null 2>&1; then
+  if ! jq -e '
+    (.packages // [])
+    | map(if type == "string" then . else .source end)
+    | any(startswith("npm:pi-mcp-adapter"))' settings.json >/dev/null 2>&1; then
+    err "mcp.json declares servers but pi-mcp-adapter is not in packages[]"
+  fi
+fi
+
 if [ "$fail" -eq 0 ]; then
-  echo "OK: agent dir is well-formed, $skills skills, $prompts prompts"
+  echo "OK: agent dir is well-formed, $skills skills, $prompts prompts, $agents agents"
 fi
 exit "$fail"
