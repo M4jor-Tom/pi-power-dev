@@ -24,13 +24,6 @@
       "extensions": [],
       "prompts": [],
       "themes": []
-    },
-    {
-      "source": "git:github.com/Egonex-AI/Understand-Anything@6ae71878beb50226a1e4b7e2f52ac6468c86f74b",
-      "skills": ["understand-anything-plugin/skills"],
-      "extensions": [],
-      "prompts": [],
-      "themes": []
     }
   ]
 }

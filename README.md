@@ -59,6 +59,7 @@ pi has no equivalent, by design, for these — each was dropped deliberately:
 | `skipDangerousModePermissionPrompt`, `skipWorkflowUsageWarning` | Nothing to skip — there is no prompt. |
 | `github` MCP | Replaced by the `gh` CLI, which `AGENTS.md` already mandates. |
 | `playwright` MCP | Replaced by the `playwright-cli` skill. |
+| `understand-anything` | Its `prepare` script needs a pnpm + TypeScript build that pi's `npm install --omit=dev` cannot run, so installing it crashes pi at startup. Its skills' helper scripts and 7 of its 10 agents depend on that build too. The `graphify` skill covers the same "codebase to queryable knowledge graph" ground. To recover it, build the upstream monorepo out-of-band and point `skills` at the result. |
 
 ## Known version gap
 

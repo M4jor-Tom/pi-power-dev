@@ -27,3 +27,5 @@ pi-debug.log
 pi-hermes-memory/
 projects-memory/
 hermes-memory-config.json
+.pi-hermes-locks.sqlite
+mcp-cache.json

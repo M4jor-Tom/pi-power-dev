@@ -85,21 +85,6 @@ if [ -n "$unpinned" ]; then
   err "unpinned package source(s): $(echo "$unpinned" | tr '\n' ' ')"
 fi
 
-# Agent definitions feed pi-subagents. It reads <agent-dir>/agents/*.md
-# whenever PI_CODING_AGENT_DIR is set, which it always is for this profile.
-agents=0
-for a in agents/*.md; do
-  [ -f "$a" ] || continue
-  if ! awk 'NR<=20 && /^name:/{found=1} END{exit !found}' "$a"; then
-    err "$a has no name in frontmatter"
-  fi
-  if ! awk 'NR<=20 && /^description:/{found=1} END{exit !found}' "$a"; then
-    err "$a has no description in frontmatter"
-  fi
-  agents=$((agents + 1))
-done
-if [ "$agents" -lt 10 ]; then err "expected >= 10 agents, found $agents"; fi
-
 # The MCP servers mcp.json declares are only reachable if the adapter is pinned.
 if jq -e '.mcpServers | length > 0' mcp.json >/dev/null 2>&1; then
   if ! jq -e '
@@ -111,6 +96,6 @@ if jq -e '.mcpServers | length > 0' mcp.json >/dev/null 2>&1; then
 fi
 
 if [ "$fail" -eq 0 ]; then
-  echo "OK: agent dir is well-formed, $skills skills, $prompts prompts, $agents agents"
+  echo "OK: agent dir is well-formed, $skills skills, $prompts prompts"
 fi
 exit "$fail"
