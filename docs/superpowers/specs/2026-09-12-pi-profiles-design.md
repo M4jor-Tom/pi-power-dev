@@ -135,7 +135,7 @@ profiles carry the same skills and extensions:
 
 ```
 pi-coding-agent git gh glab nodejs bun ripgrep fd jq yq-go
-uv python3 rtk graphify markitdown pandoc poppler-utils yt-dlp playwright-driver
+uv python3 rtk graphify markitdown pandoc poppler-utils yt-dlp
 ```
 
 Engine toolchains for gamedev stay in each game repo's own devShell; the
@@ -169,9 +169,9 @@ repositories anywhere in these repos.
 | **ui-ux-pro-max** | `git:github.com/nextlevelbuilder/ui-ux-pro-max-skill@1307d97a72e6c1cda572cb65471ae5ce82995218`, filtered to `.claude/skills`. |
 | **frontend-design**, **claude-md-management** | `git:github.com/anthropics/claude-plugins-official@ed404106fcd80ba98ecb7c851e531dcb626d13b7`, filtered to `plugins/frontend-design/skills` and `plugins/claude-md-management/skills`. The plugin's `revise-claude-md` command becomes `prompts/revise-agents-md.md`. |
 | **github** MCP | Dropped in favour of the `gh` CLI, which `AGENTS.md` already mandates. This also removes the `GITHUB_PERSONAL_ACCESS_TOKEN` failure the Claude profiles have today. |
-| **playwright** MCP | Dropped; the locally authored `playwright-cli` skill already covers browser work. |
+| **playwright** MCP | Dropped; the locally authored `playwright-cli` skill already covers browser work. It self-installs `@playwright/cli` via npm exactly as it does under Claude today, so the app ships no `playwright-driver` — that would fight the skill over browser paths. |
 | **context7** MCP | `npm:pi-mcp-adapter` plus a tracked `mcp.json`. The adapter exposes one lazy proxy tool rather than N server tools. |
-| subagents (`Task` tool) | pi's own `examples/extensions/subagent/` vendored into `extensions/subagent/`. Reads `agents/*.md`, spawns isolated `pi -p` processes, supports single/parallel/chain dispatch and per-agent `model:`. |
+| subagents (`Task` tool) | `npm:pi-subagents@0.67.0`. A pi package (`keywords: ["pi-package"]`) by the `pi-mcp-adapter` author. Reads `<agent-dir>/agents/*.md` — verified in source: `buildAgentDiscoverySources` selects `join(getAgentDir(), "agents")` whenever `PI_CODING_AGENT_DIR` is set, which is always our case. Same `name`/`description`/`tools`/`model` frontmatter as Claude Code agents. Chosen over vendoring pi's 1195-line `examples/extensions/subagent/`. |
 | `statusLine: bunx ccstatusline@latest` | Dropped. pi's built-in footer already shows cwd, session name, token and cache usage, cost, context usage and model. |
 | `effortLevel: "xhigh"` | `defaultThinkingLevel: "xhigh"` |
 | `theme: "auto"` | `theme` — pi detects terminal background on first run. |
@@ -196,7 +196,7 @@ rules, `pi-game-dev` carries those plus the ontology-first rules.
 | `vendor/awesome-gamedev-agent-skills` submodule | `git:github.com/gamedev-skills/awesome-gamedev-agent-skills@9ca5296b219049c5b68494e1f3c274ead6d727b3`, skills filtered to `skills` and `router`. |
 | `vendor/claude-ontology-skill` submodule (branch-pinned fork) | `git:github.com/M4jor-Tom/claude-ontology-skill@13bfe0ce8c46fbd3d77e9faf94ebeb6ba4f5bab3`. Pinned to the commit rather than the branch, since pi pins refs. |
 | `skills/game-from-ontology/` | Copied verbatim. Its internal references to `skills/ontology/SKILL.md` and `skills/router/SKILL.md` are rewritten to name the skills rather than hardcode paths, because package skills resolve under `git/`. |
-| `skills/ontology-resume-router-slice/` (untracked nested git repo) | `git:github.com/M4jor-Tom/ontology-resume-router-slice@740be20`. This removes the nested-repository problem. The frontmatter `name:` typo `onthology-resume-router-slice` is fixed to match the directory. Its per-phase model routing depends on `extensions/subagent/`. |
+| `skills/ontology-resume-router-slice/` (untracked nested git repo) | Copied into `skills/ontology-resume-router-slice/` as three plain files. Not a package: its `SKILL.md` sits at the repo root, and pi's convention discovery only scans a package's `skills/` directory. Copying is also what removes the nested-repository problem. The frontmatter `name:` typo `onthology-resume-router-slice` is fixed to match the directory. Its per-phase model routing depends on `pi-subagents`. |
 | `model: "claude-fable-5-1[1m]"` | `defaultProvider` + `defaultModel`. |
 | `extraKnownMarketplaces` | Subsumed by `packages[]`. |
 | `scripts/check.sh` | Adapted: assert `settings.json` and `mcp.json` parse, every `skills/*/SKILL.md` has `name` and `description`, and every `prompts/*.md` is non-empty. It can no longer count vendored skills, because those live in the gitignored `git/` tree after pi installs them. |
