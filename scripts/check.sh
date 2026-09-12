@@ -41,5 +41,22 @@ done
 if [ "$skills" -lt 7 ]; then err "expected >= 7 skills, found $skills"; fi
 if [ ! -f skills/context7/SKILL.md ]; then err "missing skills/context7/SKILL.md"; fi
 
-if [ "$fail" -eq 0 ]; then echo "OK: agent dir is well-formed, $skills skills"; fi
+# Prompt templates are pi's slash commands. Discovery is non-recursive, so a
+# template in a subdirectory silently does nothing.
+prompts=0
+for p in prompts/*.md; do
+  [ -f "$p" ] || continue
+  if [ ! -s "$p" ]; then err "empty prompt template: $p"; fi
+  prompts=$((prompts + 1))
+done
+if [ -d prompts ] && [ "$prompts" -lt 3 ]; then
+  err "expected >= 3 prompt templates, found $prompts"
+fi
+if find prompts -mindepth 2 -name '*.md' 2>/dev/null | grep -q .; then
+  err "prompts/ has nested .md files; discovery is non-recursive"
+fi
+
+if [ "$fail" -eq 0 ]; then
+  echo "OK: agent dir is well-formed, $skills skills, $prompts prompts"
+fi
 exit "$fail"
