@@ -9,10 +9,15 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
  * (`TF=terraform; $TF destroy`, aliases, `bash -c "$(printf ...)"`). This
  * stops a fat-finger and a confidently-wrong agent, not a determined bypass —
  * for that, use credentials that cannot destroy.
+ *
+ * The quote-stripping in normalize() means a command that merely mentions the
+ * phrase is blocked too — `git commit -m "revert the terraform destroy
+ * incident"` does not run. That is deliberate: a false block costs one
+ * rephrase, a false pass costs infrastructure.
  */
 const DENIED: Array<{ pattern: RegExp; what: string }> = [
-	{ pattern: /(^|[\s;&|(])terraform destroy(?=[\s;&|)]|$)/, what: "terraform destroy" },
-	{ pattern: /(^|[\s;&|(])tofu destroy(?=[\s;&|)]|$)/, what: "tofu destroy" },
+	{ pattern: /(^|[\s;&|(`])terraform destroy(?=[\s;&|)`]|$)/, what: "terraform destroy" },
+	{ pattern: /(^|[\s;&|(`])tofu destroy(?=[\s;&|)`]|$)/, what: "tofu destroy" },
 ];
 
 /**

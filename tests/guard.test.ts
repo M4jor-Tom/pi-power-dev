@@ -37,6 +37,11 @@ test("blocks inside command substitution", () => {
 	assert.ok(denyReason("$(terraform destroy)"));
 });
 
+test("blocks inside backtick substitution", () => {
+	assert.ok(denyReason("`terraform destroy`"));
+	assert.ok(denyReason("echo `terraform destroy`"));
+});
+
 test("blocks with leading whitespace or doubled spacing", () => {
 	assert.ok(denyReason("  terraform destroy"));
 	assert.ok(denyReason("terraform  destroy"));
