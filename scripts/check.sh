@@ -56,6 +56,20 @@ if find prompts -mindepth 2 -name '*.md' 2>/dev/null | grep -q .; then
   err "prompts/ has nested .md files; discovery is non-recursive"
 fi
 
+# pi loads every extensions/*.ts as an extension, so a stray test file there
+# would run as one. Tests live in tests/.
+for e in extensions/*.ts; do
+  [ -f "$e" ] || continue
+  case "$e" in
+    *.test.ts) err "test file in extensions/ would load as an extension: $e" ;;
+  esac
+done
+
+# Extension unit tests.
+if [ -d tests ] && command -v node >/dev/null 2>&1; then
+  if ! node --test 'tests/*.test.ts' >/dev/null 2>&1; then err "node --test 'tests/*.test.ts' failed"; fi
+fi
+
 if [ "$fail" -eq 0 ]; then
   echo "OK: agent dir is well-formed, $skills skills, $prompts prompts"
 fi
