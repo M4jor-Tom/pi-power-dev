@@ -38,7 +38,8 @@ for s in skills/*/; do
   fi
   skills=$((skills + 1))
 done
-if [ "$skills" -lt 6 ]; then err "expected >= 6 skills, found $skills"; fi
+if [ "$skills" -lt 7 ]; then err "expected >= 7 skills, found $skills"; fi
+if [ ! -f skills/context7/SKILL.md ]; then err "missing skills/context7/SKILL.md"; fi
 
 if [ "$fail" -eq 0 ]; then echo "OK: agent dir is well-formed, $skills skills"; fi
 exit "$fail"
