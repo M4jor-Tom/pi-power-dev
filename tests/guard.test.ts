@@ -23,3 +23,29 @@ test("does not match a destroy that is not terraform's", () => {
 	assert.equal(denyReason("./destroy.sh"), undefined);
 	assert.equal(denyReason("echo terraform destroys nothing"), undefined);
 });
+
+test("blocks a newline-separated destroy", () => {
+	assert.ok(denyReason("echo hi\nterraform destroy"));
+});
+
+test("blocks despite quoting the subcommand", () => {
+	assert.ok(denyReason('terraform "destroy"'));
+	assert.ok(denyReason("terraform 'destroy'"));
+});
+
+test("blocks inside command substitution", () => {
+	assert.ok(denyReason("$(terraform destroy)"));
+});
+
+test("blocks with leading whitespace or doubled spacing", () => {
+	assert.ok(denyReason("  terraform destroy"));
+	assert.ok(denyReason("terraform  destroy"));
+});
+
+test("blocks when reached through xargs", () => {
+	assert.ok(denyReason("xargs terraform destroy"));
+});
+
+test("does not block terraform destroy-plan", () => {
+	assert.equal(denyReason("terraform destroy-plan"), undefined);
+});

@@ -26,6 +26,8 @@ export function rtkRewrite(command: string): string | undefined {
 	if (!stdout.trim()) return undefined;
 	try {
 		const rewritten = JSON.parse(stdout)?.hookSpecificOutput?.updatedInput?.command;
+		// Defence against future contract change: rtk currently returns empty stdout when it
+		// has no rewrite, but guard against an identical-command reply.
 		return typeof rewritten === "string" && rewritten !== command ? rewritten : undefined;
 	} catch {
 		return undefined;
