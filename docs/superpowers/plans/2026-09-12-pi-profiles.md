@@ -1268,8 +1268,14 @@ writeShellApplication {
     if [ ! -e "$DIR" ]; then
       echo "${profileName}: cloning ${configRepo} -> $DIR" >&2
       git clone "${configRepo}" "$DIR"
-    elif [ -d "$DIR/.git" ] && [ -z "$(git -C "$DIR" status --porcelain)" ]; then
-      # Clean tree only. A dirty tree keeps its local edits, always.
+    elif [ -d "$DIR/.git" ] \
+      && [ "$(git -C "$DIR" remote get-url origin 2>/dev/null)" = "${configRepo}" ] \
+      && [ -z "$(git -C "$DIR" status --porcelain)" ]; then
+      # Clean tree, and only a checkout of this profile's own repo. A dirty
+      # tree keeps its local edits, always; an unrelated checkout is never
+      # touched. Without the origin test, pointing the env var at any clean
+      # tracked directory would fast-forward it as a side effect of starting
+      # the agent.
       git -C "$DIR" pull --ff-only --quiet \
         || echo "${profileName}: pull failed, using the local checkout" >&2
     fi
@@ -1708,7 +1714,13 @@ Reuses Task 8's `package.nix` verbatim, with different arguments.
 mkdir -p ~/repos/pi-game-dev.app && cd ~/repos/pi-game-dev.app && git init -b main
 cp ~/repos/pi-power-dev.app/package.nix .
 cp ~/repos/pi-power-dev.app/.gitignore .
+cp ~/repos/pi-power-dev.app/flake.lock .
 ```
+
+Copy the lockfile too: two sibling apps shipping the same wrapper should pin
+the same nixpkgs. Letting `nix build` resolve a fresh one makes the two apps
+drift apart for no reason, and an unpinned `nixpkgs-unstable` is a live source
+of build variability.
 
 `package.nix` is parameterised, so it needs no edits — only the overlay
 passes different values.
