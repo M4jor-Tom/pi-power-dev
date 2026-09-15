@@ -20,7 +20,9 @@
     },
     {
       "source": "git:github.com/nextlevelbuilder/ui-ux-pro-max-skill@1307d97a72e6c1cda572cb65471ae5ce82995218",
-      "skills": [".claude/skills"],
+      "skills": [
+        ".claude/skills"
+      ],
       "extensions": [],
       "prompts": [],
       "themes": []
